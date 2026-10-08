@@ -1,7 +1,7 @@
 name: A workflow for Population Report System
 
 on:
-  push
+  push:
 
 jobs:
   build:
@@ -21,10 +21,17 @@ jobs:
       - name: Compile with Maven
         run: mvn compile
 
+      - name: Check Dockerfile
+        run: |
+          pwd
+          ls -la
+          test -f Dockerfile
+
       - name: Build Docker Image
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: ./Dockerfile
           tags: devopsimage:latest
           load: true
 
@@ -32,6 +39,6 @@ jobs:
         run: |
           docker run --name devopscontainer -d devopsimage:latest
 
-      - name: View Container Logs (Non-blocking)
+      - name: View Container Logs
         run: |
           docker logs devopscontainer

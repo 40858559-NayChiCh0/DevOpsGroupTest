@@ -18,14 +18,15 @@ jobs:
           java-version: '25'
           distribution: 'temurin'
 
-      - name: Compile with Maven
-        run: mvn compile
+      - name: Build with Maven
+        run: mvn clean package -DskipTests
 
-      - name: Check Dockerfile
+      - name: Check JAR file
         run: |
-          pwd
-          ls -la
-          test -f Dockerfile
+          echo "Checking target directory..."
+          ls -la target
+          test -f target/devops.jar
+          echo "devops.jar found successfully!"
 
       - name: Build Docker Image
         uses: docker/build-push-action@v6

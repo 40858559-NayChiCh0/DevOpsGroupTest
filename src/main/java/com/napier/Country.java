@@ -5,29 +5,11 @@ package com.napier;
  */
 public class Country {
 
-    /**
-     * The unique three-letter country code.
-     */
+
     private String code;
-
-    /**
-     * The name of the country.
-     */
     private String name;
-
-    /**
-     * The continent where the country is located.
-     */
     private String continent;
-
-    /**
-     * The geographical region of the country.
-     */
     private String region;
-
-    /**
-     * The total population of the country.
-     */
     private int population;
 
     /**

@@ -13,6 +13,12 @@ public class Main {
             if (connection.isValid(2)) {
                 System.out.println(
                         "Database connection succeeded.");
+                // Population Breakdown & Urbanization Reports
+                PopulationReport report = new PopulationReport(connection);
+
+                // Generate all three reports
+                report.generateAllReports();
+
             } else {
                 System.out.println(
                         "Database connection is invalid.");
@@ -27,6 +33,6 @@ public class Main {
             e.printStackTrace();
         }
 
-         System.out.printf("Yu Ya Kyaw Feature -> Develop");
+         System.out.print("Han Thar Soe San Feature -> Develop");
     }
 }

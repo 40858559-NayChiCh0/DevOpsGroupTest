@@ -28,7 +28,6 @@ public class DBConnection {
 
         System.out.println("Connecting to: " + url);
 
-        return DriverManager.getConnection(
-                url, username, password);
+        return DriverManager.getConnection(url, username, password);
     }
 }

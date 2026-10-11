@@ -12,8 +12,8 @@ services:
       DB_PASSWORD: devops
 
   db:
-    build: db/
-    restart: always
+    build: ./db
+    restart: unless-stopped
     ports:
       - "33060:3306"
     environment:

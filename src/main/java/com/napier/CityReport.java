@@ -108,13 +108,14 @@ public class CityReport {
     }
 
 
+
     /**
-     * Gets all cities in a selected continent,
+     * Retrieves all cities in a selected continent,
      * ordered by population from largest to smallest.
      *
-     * @param connection Database connection.
-     * @param continent Selected continent.
-     * @return List of cities.
+     * @param connection Active database connection.
+     * @param continent Name of the selected continent.
+     * @return List of cities in the selected continent.
      */
     public ArrayList<City> getCitiesByContinent(
             Connection connection, String continent) {
@@ -163,6 +164,7 @@ public class CityReport {
                             resultSet.getString("CountryName"));
 
                     city.setCountry(country);
+
                     cities.add(city);
                 }
             }
@@ -174,6 +176,112 @@ public class CityReport {
         }
 
         return cities;
+    }
+
+
+
+    /**
+     * Issue 3: Gets all cities in a selected region,
+     * ordered by population from largest to smallest.
+     *
+     * @param connection Database connection.
+     * @param region Selected region.
+     * @return List of cities in the selected region.
+     */
+    public ArrayList<City> getCitiesByRegion(
+            Connection connection, String region) {
+
+        ArrayList<City> cities = new ArrayList<>();
+
+        String sql = """
+            SELECT city.ID,
+                   city.Name,
+                   city.CountryCode,
+                   country.Name AS CountryName,
+                   city.District,
+                   city.Population
+            FROM city
+            JOIN country
+                ON city.CountryCode = country.Code
+            WHERE country.Region = ?
+            ORDER BY city.Population DESC, city.ID ASC
+            """;
+
+        try (PreparedStatement statement =
+                     connection.prepareStatement(sql)) {
+
+            statement.setString(1, region);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+
+                while (resultSet.next()) {
+
+                    City city = new City();
+
+                    city.setId(resultSet.getInt("ID"));
+                    city.setName(resultSet.getString("Name"));
+                    city.setCountryCode(
+                            resultSet.getString("CountryCode"));
+                    city.setDistrict(
+                            resultSet.getString("District"));
+                    city.setPopulation(
+                            resultSet.getInt("Population"));
+
+                    Country country = new Country();
+
+                    country.setCode(
+                            resultSet.getString("CountryCode"));
+                    country.setName(
+                            resultSet.getString("CountryName"));
+
+                    city.setCountry(country);
+                    cities.add(city);
+                }
+            }
+
+        } catch (SQLException e) {
+            throw new IllegalStateException(
+                    "Failed to retrieve cities for region: "
+                            + region, e);
+        }
+
+        return cities;
+    }
+
+
+
+    /**
+     * Retrieves all available regions from the database.
+     *
+     * @param connection Database connection.
+     * @return List of region names.
+     */
+    public ArrayList<String> getAllRegions(Connection connection) {
+
+        ArrayList<String> regions = new ArrayList<>();
+
+        String sql = """
+            SELECT DISTINCT Region
+            FROM country
+            WHERE Region IS NOT NULL
+              AND Region <> ''
+            ORDER BY Region ASC
+            """;
+
+        try (PreparedStatement statement =
+                     connection.prepareStatement(sql);
+             ResultSet resultSet = statement.executeQuery()) {
+
+            while (resultSet.next()) {
+                regions.add(resultSet.getString("Region"));
+            }
+
+        } catch (SQLException e) {
+            throw new IllegalStateException(
+                    "Failed to retrieve regions.", e);
+        }
+
+        return regions;
     }
 
 }

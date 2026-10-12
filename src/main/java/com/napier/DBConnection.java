@@ -12,7 +12,7 @@ public class DBConnection {
                 .getOrDefault("DB_HOST", "localhost");
 
         String port = System.getenv()
-                .getOrDefault("DB_PORT", "33060");
+                .getOrDefault("DB_PORT", "33061");
 
         String database = System.getenv()
                 .getOrDefault("DB_NAME", "world");
@@ -28,7 +28,6 @@ public class DBConnection {
 
         System.out.println("Connecting to: " + url);
 
-        return DriverManager.getConnection(
-                url, username, password);
+        return DriverManager.getConnection(url, username, password);
     }
 }

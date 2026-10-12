@@ -24,7 +24,7 @@ public class CapitalCityReports {
                         "JOIN city ci ON co.Capital = ci.ID " +
                         "ORDER BY ci.Population DESC";
 
-        printReport(sql, null);
+        printReport(sql,null);
     }
 
     // REPORT 2: All capital cities in a continent

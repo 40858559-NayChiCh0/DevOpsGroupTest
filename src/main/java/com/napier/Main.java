@@ -72,6 +72,12 @@ public class Main {
                 cityReport.printCityReport(
                         topNCities,"TOP " + n + " POPULATED CITIES IN THE WOR"
                 );
+
+                // Issue 40: Top N populated Cities in a continent
+                ArrayList<City> topNCitiesByContinent = cityReport.getTopNCitiesByContinent(connection, continent, n);
+                cityReport.printCityReport(
+                        topNCitiesByContinent, "TOP " + n + " POPULATED CITIES IN " + continent.toUpperCase()
+                );
             } else {
                 System.out.println(
                         "Database connection is invalid.");

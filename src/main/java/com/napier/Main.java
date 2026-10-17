@@ -5,55 +5,79 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 
 public class Main {
-
-    public static void main(String[] args) {
+    static void main(String[] args) {
 
         // Change these values to generate reports for other locations.
         String continent = "Asia";
         String region = "Eastern Asia";
         String countryName = "Myanmar";
+        String district = "Sagaing";
+        int n = 10;
 
-        try (Connection connection = DBConnection.getConnection()) {
+        try (Connection connection =
+                     DBConnection.getConnection()) {
 
-            if (connection == null || !connection.isValid(2)) {
-                System.out.println("Database connection is invalid.");
-                return;
+            if (connection.isValid(2)) {
+                System.out.println(
+                        "Database connection succeeded.");
+                CityReport cityReport = new CityReport();
+
+
+                // Issue 34: All cities in the world by population.
+                ArrayList<City> cities =
+                        cityReport.getAllCities(connection);
+
+                cityReport.printCityReport(
+                        cities,
+                        "ALL CITIES IN THE WORLD BY POPULATION");
+
+                // Issue 35: All cities in a continent(Asia) by population.
+                ArrayList<City> continentCities =
+                        cityReport.getCitiesByContinent(
+                                connection, continent);
+
+                cityReport.printCityReport(
+                        continentCities,
+                        "ALL CITIES IN " + continent.toUpperCase()
+                                + " BY POPULATION");
+
+                // Issue 36: All cities in a region by population.
+                ArrayList<City> regionCities =
+                        cityReport.getCitiesByRegion(
+                                connection, region);
+
+                cityReport.printCityReport(
+                        regionCities,
+                        "ALL CITIES IN " + region.toUpperCase()
+                                + " BY POPULATION");
+
+                // Issue 37: All cities in a country by population
+                ArrayList<City> countryCities =
+                        cityReport.getCitiesByCountry(
+                                connection, countryName);
+                cityReport.printCityReport(countryCities,
+                        "ALL CITIES IN " + countryName.toUpperCase()
+                                + "BY POPULATION");
+
+                // Issue 38: All cities in a district by population
+                ArrayList<City> districtCities = cityReport.getCitiesByDistrict(
+                        connection, district);
+                cityReport.printCityReport(districtCities,
+                        "ALL CITIES IN " + district.toUpperCase()
+                        +"BY POPULATION"
+                );
+            } else {
+                System.out.println(
+                        "Database connection is invalid.");
             }
 
-            System.out.println("Database connection succeeded.");
-            CityReport cityReport = new CityReport();
-
-            // Issue 1: All cities in the world by population.
-            System.out.println("\nIssue 1: All Cities in the World by Population");
-            ArrayList<City> cities = cityReport.getAllCities(connection);
-            cityReport.printCityReport(cities);
-
-            // Issue 2: All cities in a continent by population.
-            System.out.println("\nIssue 2: All Cities in " + continent + " by Population");
-            ArrayList<City> continentCities =
-                    cityReport.getCitiesByContinent(connection, continent);
-            cityReport.printCityReport(continentCities);
-
-            // Issue 3: All cities in a region by population.
-            System.out.println("\nIssue 3: All Cities in " + region + " by Population");
-            ArrayList<City> regionCities =
-                    cityReport.getCitiesByRegion(connection, region);
-            cityReport.printCityReport(regionCities);
-
-            // Issue 4: All cities in a country by population.
-            System.out.println("\nIssue 4: All Cities in " + countryName + " by Population");
-            ArrayList<City> countryCities =
-                    cityReport.getCitiesByCountry(connection, countryName);
-            cityReport.printCityReport(countryCities);
-
         } catch (SQLException e) {
-            System.err.println("Database connection failed: " + e.getMessage());
-            e.printStackTrace();
-        } catch (IllegalStateException e) {
-            System.err.println("Report generation failed: " + e.getMessage());
+
+            System.err.println(
+                    "Database connection failed: "
+                            + e.getMessage());
+
             e.printStackTrace();
         }
-
-        System.out.println("Yu Ya Kyaw Feature -> Develop");
     }
 }

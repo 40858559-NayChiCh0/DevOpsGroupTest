@@ -9,6 +9,7 @@ import java.util.ArrayList;
 public class CityReport {
 
     /**
+     * Issue 34: All cities in the world
      * Gets all cities in the world ordered by population.
      *
      * @param connection Database connection.
@@ -72,19 +73,22 @@ public class CityReport {
 
 
     /**
-     * Prints all cities in a formatted table.
+     * Prints city reports with Name, Country,
+     * District and Population.
      *
      * @param cities List of cities.
+     * @param title Report title.
      */
-    public void printCityReport(ArrayList<City> cities) {
+    public void printCityReport(
+            ArrayList<City> cities, String title) {
+
+        System.out.println(
+                "\n========== " + title + " ==========");
 
         if (cities == null || cities.isEmpty()) {
             System.out.println("No cities found.");
             return;
         }
-
-        System.out.println(
-                "\n========== ALL CITIES IN THE WORLD ==========");
 
         System.out.printf(
                 "%-25s %-25s %-25s %15s%n",
@@ -106,9 +110,8 @@ public class CityReport {
         System.out.println("Total cities: " + cities.size());
     }
 
-
-
     /**
+     * Issue 35: All cities in a selected continent
      * Retrieves all cities in a selected continent,
      * ordered by population from largest to smallest.
      *
@@ -167,20 +170,17 @@ public class CityReport {
                     cities.add(city);
                 }
             }
-
         } catch (SQLException e) {
             throw new IllegalStateException(
                     "Failed to retrieve cities for continent: "
                             + continent, e);
         }
-
         return cities;
     }
 
 
-
     /**
-     * Issue 3: Gets all cities in a selected region,
+     * Issue 36: Gets all cities in a selected region,
      * ordered by population from largest to smallest.
      *
      * @param connection Database connection.
@@ -248,53 +248,65 @@ public class CityReport {
     }
 
 
-
     /**
-     * Retrieves all available regions from the database.
+     * Issue 37: All cities in a selected country
+     * ordered by population from largest to smallest
      *
-     * @param connection Database connection.
-     * @return List of region names.
+     * @param connection Database connection
+     * @param countryName selected country
+     * @return List of cities
      */
-    public ArrayList<String> getAllRegions(Connection connection) {
-
-        ArrayList<String> regions = new ArrayList<>();
-
+    public ArrayList<City> getCitiesByCountry(Connection connection, String countryName) {
+        ArrayList<City> cities = new ArrayList<>();
         String sql = """
-            SELECT DISTINCT Region
-            FROM country
-            WHERE Region IS NOT NULL
-              AND Region <> ''
-            ORDER BY Region ASC
-            """;
+                SELECT city.ID,
+                city.Name,
+                city.CountryCode,
+                country.Name AS CountryName,
+                city.District,
+                city.Population
+                FROM city
+                JOIN country
+                ON city.CountryCode = country.Code
+                WHERE country.Name = ?
+                ORDER BY city.Population DESC, city.ID ASC
+                """;
+        try(PreparedStatement statement = connection.prepareStatement(sql)){
+            statement.setString(1,countryName);
+            try(ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()){
+                    City city = new City();
+                    city.setId(resultSet.getInt("ID"));
+                    city.setName(resultSet.getString("Name"));
+                    city.setCountryCode(resultSet.getString("CountryCode"));
+                    city.setDistrict(resultSet.getString("District"));
+                    city.setPopulation(resultSet.getInt("Population"));
 
-        try (PreparedStatement statement =
-                     connection.prepareStatement(sql);
-             ResultSet resultSet = statement.executeQuery()) {
-
-            while (resultSet.next()) {
-                regions.add(resultSet.getString("Region"));
+                    Country country = new Country();
+                    country.setCode(resultSet.getString("CountryCode"));
+                    country.setName(resultSet.getString("CountryName"));
+                    city.setCountry(country);
+                    cities.add(city);
+                }
             }
-
-        } catch (SQLException e) {
-            throw new IllegalStateException(
-                    "Failed to retrieve regions.", e);
+        }catch (SQLException e) {
+            throw new IllegalStateException("Failed to retrieve cities for country: "
+            + countryName, e);
         }
-
-        return regions;
+        return cities;
     }
 
 
-
     /**
-     * Issue 4: Gets all cities in a selected country,
+     * Issue 38: All cities in a selected district
      * ordered by population from largest to smallest.
      *
      * @param connection Database connection.
-     * @param countryName Selected country name.
-     * @return List of cities in the selected country.
+     * @param district Selected district.
+     * @return List of cities.
      */
-    public ArrayList<City> getCitiesByCountry(
-            Connection connection, String countryName) {
+    public ArrayList<City> getCitiesByDistrict(
+            Connection connection, String district) {
 
         ArrayList<City> cities = new ArrayList<>();
 
@@ -308,14 +320,14 @@ public class CityReport {
             FROM city
             JOIN country
                 ON city.CountryCode = country.Code
-            WHERE country.Name = ?
+            WHERE city.District = ?
             ORDER BY city.Population DESC, city.ID ASC
             """;
 
         try (PreparedStatement statement =
                      connection.prepareStatement(sql)) {
 
-            statement.setString(1, countryName);
+            statement.setString(1, district);
 
             try (ResultSet resultSet = statement.executeQuery()) {
 
@@ -346,45 +358,12 @@ public class CityReport {
 
         } catch (SQLException e) {
             throw new IllegalStateException(
-                    "Failed to retrieve cities for country: "
-                            + countryName, e);
+                    "Failed to retrieve cities for district: "
+                            + district, e);
         }
 
         return cities;
     }
 
-
-    /**
-     * Issue 4: Retrieves all countries from the database,
-     * ordered alphabetically by country name.
-     *
-     * @param connection Database connection.
-     * @return List of country names.
-     */
-    public ArrayList<String> getAllCountries(Connection connection) {
-
-        ArrayList<String> countries = new ArrayList<>();
-
-        String sql = """
-            SELECT Name
-            FROM country
-            ORDER BY Name ASC
-            """;
-
-        try (PreparedStatement statement =
-                     connection.prepareStatement(sql);
-             ResultSet resultSet = statement.executeQuery()) {
-
-            while (resultSet.next()) {
-                countries.add(resultSet.getString("Name"));
-            }
-
-        } catch (SQLException e) {
-            throw new IllegalStateException(
-                    "Failed to retrieve countries.", e);
-        }
-
-        return countries;
-    }
 
 }

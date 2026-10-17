@@ -66,6 +66,12 @@ public class Main {
                         "ALL CITIES IN " + district.toUpperCase()
                         +"BY POPULATION"
                 );
+
+                //Issue 39: Top N populated Cities in the World
+                ArrayList<City> topNCities = cityReport.getTopNCitiesInWorld(connection,n);
+                cityReport.printCityReport(
+                        topNCities,"TOP " + n + " POPULATED CITIES IN THE WOR"
+                );
             } else {
                 System.out.println(
                         "Database connection is invalid.");

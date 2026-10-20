@@ -28,11 +28,10 @@ class MainTest {
 
     @Test
     void printCityReportTestContainsNull() {
-        // Test handling when the list contains a null element
+
         ArrayList<City> cities = new ArrayList<>();
         cities.add(null);
-        assertThrows(NullPointerException.class, () ->
-                cityReport.printCityReport(cities,"TEST REPORT TITLE"));
+        cityReport.printCityReport(cities,"TEST REPORT TITLE");
     }
 
     @Test

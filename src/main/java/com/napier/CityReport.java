@@ -75,6 +75,7 @@ public class CityReport {
     /**
      * Prints city reports with Name, Country,
      * District and Population.
+     * Handles null lists and null City objects safely
      *
      * @param cities List of cities.
      * @param title Report title.
@@ -90,6 +91,19 @@ public class CityReport {
             return;
         }
 
+        // Country valid cities, excluding null objects
+        int validCityCount = 0;
+        for (City city : cities) {
+            if(city != null){
+                validCityCount++;
+            }
+        }
+
+        if (validCityCount == 0) {
+            System.out.println("No cities found.");
+            return;
+        }
+
         System.out.printf(
                 "%-25s %-25s %-25s %15s%n",
                 "Name", "Country", "District", "Population");
@@ -98,11 +112,22 @@ public class CityReport {
 
         for (City city : cities) {
 
+            // Skip null City objects
+            if(city == null){
+                continue;
+            }
+            String countryName = "Unknown";
+
+            // Handle null country objects
+            if(city.getCountry() != null){
+                countryName = city.getCountry().getName();
+            }
+
             System.out.printf(
                     "%-25.25s %-25.25s %-25.25s %,15d%n",
-                    city.getName(),
-                    city.getCountry().getName(),
-                    city.getDistrict(),
+                    city.getName() == null ? "Unknown" : city.getName(),
+                    countryName == null ? "Unknown" : countryName,
+                    city.getDistrict() == null ? "Unknown" : city.getDistrict(),
                     city.getPopulation());
         }
 

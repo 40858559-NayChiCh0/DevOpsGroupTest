@@ -1,13 +1,10 @@
 name: A workflow for Population Report System
-
-on:
-  push:
+on: push
 
 jobs:
-  build:
-    name: Population Report action
+  Build:
+    name: Build and Start Using docker-compose
     runs-on: ubuntu-26.04
-
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -17,29 +14,10 @@ jobs:
         with:
           java-version: '25'
           distribution: 'temurin'
-
-      - name: Build with Maven
-        run: mvn clean package -DskipTests
-
-      - name: Check JAR file
+      - name: Package and Run docker compose
         run: |
-          echo "Checking target directory..."
-          ls -la target
-          test -f target/devops.jar
-          echo "devops.jar found successfully!"
-
-      - name: Build Docker Image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile
-          tags: devopsimage:latest
-          load: true
-
-      - name: Run Docker Container
+          mvn package -DskipTests
+          docker compose up --abort-on-container-exit
+      - name: View Container Logs (Non-blocking)
         run: |
-          docker run --name devopscontainer -d devopsimage:latest
-
-      - name: View Container Logs
-        run: |
-          docker logs devopscontainer
+            docker logs devopscontainer

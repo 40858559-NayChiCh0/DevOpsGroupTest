@@ -14,6 +14,7 @@ jobs:
         with:
           java-version: '25'
           distribution: 'temurin'
+
       - name: Package and Run docker compose
         run: |
           mvn package -DskipTests

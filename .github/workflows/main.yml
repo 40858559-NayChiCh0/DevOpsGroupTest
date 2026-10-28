@@ -16,7 +16,8 @@ jobs:
           java-version: '25'
           distribution: 'temurin'
       - name: Unit Tests
-        run: mvn -Dtest=com.napier.devops.AppTest test
+        run: mvn -Dtest=com.napier.MainTest test
+
 
   build:
     name: Build and Start Using docker-compose

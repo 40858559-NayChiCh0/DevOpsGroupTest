@@ -71,4 +71,17 @@ class MainIntegrationTest {
             }
         }
     }
+
+    // Test issue 35: Cities in Asia
+    @Test
+    void testGetAllCities() throws SQLException {
+        try(Connection connection = DBConnection.getConnection()) {
+            ArrayList<City> cities = cityReport.getCitiesByContinent(connection, "Asia");
+            assertNotNull(cities);
+            assertFalse(cities.isEmpty());
+            for(City city : cities){
+                assertNotNull(city.getCountry());
+            }
+        }
+    }
 }

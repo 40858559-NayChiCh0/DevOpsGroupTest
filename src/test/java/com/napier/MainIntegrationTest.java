@@ -75,7 +75,7 @@ class MainIntegrationTest {
     // Test issue 35: Cities in Asia
     @Test
     void testGetAllCities() throws SQLException {
-        try(Connection connection = DBConnection.getConnection()) {
+        try(Connection connection = DBConnection.getConnection(10,1000)) {
             ArrayList<City> cities = cityReport.getCitiesByContinent(connection, "Asia");
             assertNotNull(cities);
             assertFalse(cities.isEmpty());
@@ -88,7 +88,7 @@ class MainIntegrationTest {
     // Test issue 36: cities in Eastern Asia
     @Test
     void testGetAllCitiesByRegion() throws SQLException {
-        try(Connection connection = DBConnection.getConnection()) {
+        try(Connection connection = DBConnection.getConnection(10,1000)) {
             ArrayList<City> cities = cityReport.getCitiesByRegion(connection, "Eastern Asia");
             assertNotNull(cities);
             assertFalse(cities.isEmpty());
@@ -98,7 +98,7 @@ class MainIntegrationTest {
     // Test issue 37: cities in Myanmar
     @Test
     void testGetAllCitiesByCountry() throws SQLException {
-        try(Connection connection = DBConnection.getConnection()) {
+        try(Connection connection = DBConnection.getConnection(10,1000)) {
             ArrayList<City> cities = cityReport.getCitiesByCountry(connection, "Myanmar");
             assertNotNull(cities);
             assertFalse(cities.isEmpty());
@@ -108,5 +108,22 @@ class MainIntegrationTest {
                 );
             }
         }
+    }
+
+    // Test issue 38: cities in district
+    @Test
+    void testGetAllCitiesByDistrict() throws SQLException {
+        try(Connection connection = DBConnection.getConnection(10,1000)) {
+            ArrayList<City> cities = cityReport
+                    .getCitiesByDistrict(connection,"Sagaing");
+            assertNotNull(cities);
+            assertFalse(cities.isEmpty());
+            for(City city : cities){
+                assertEquals("Sagaing",
+                        city.getDistrict());
+            }
+        }
+
+
     }
 }

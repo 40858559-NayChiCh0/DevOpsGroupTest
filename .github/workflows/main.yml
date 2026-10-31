@@ -42,6 +42,7 @@ jobs:
           docker stop devopsgrouptest-db-1
           docker rm devopsgrouptest-db-1
           docker image rm database  
+          
 
   build:
     name: Build and Start Using docker-compose

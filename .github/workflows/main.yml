@@ -3,7 +3,12 @@ on:
   push:
     branches:
       - master
-      - lab08
+      - develop
+      - 'feature/**'
+  pull_request:
+    branches:
+      - develop
+      - master
 
 jobs:
   UnitTests:

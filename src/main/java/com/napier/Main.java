@@ -4,20 +4,20 @@ import java.sql.Connection;
 import java.sql.SQLException;
 
 public class Main {
-    public static void main(String[] args) {
 
-        try (Connection connection = DBConnection.getConnection()) {
+     static void main(String[] args) {
+
+        try (Connection connection =
+                     DBConnection.getConnection()) {
 
             if (connection.isValid(2)) {
                 System.out.println(
                         "Database connection succeeded.");
+                // Population Breakdown & Urbanization Reports
+                PopulationReport report = new PopulationReport(connection);
 
-                CapitalCityReports reports =
-                        new CapitalCityReports(connection);
-
-                System.out.println(
-                        "\nREPORT 1: All Capital Cities in the World");
-                reports.getAllCapitalCities();
+                // Generate all three reports
+                report.generateAllReports();
 
             } else {
                 System.out.println(
@@ -25,10 +25,14 @@ public class Main {
             }
 
         } catch (SQLException e) {
+
             System.err.println(
-                    "Database connection failed: " + e.getMessage());
+                    "Database connection failed: "
+                            + e.getMessage());
 
             e.printStackTrace();
         }
+
+         System.out.print("Han Thar Soe San Feature -> Develop");
     }
 }

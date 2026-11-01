@@ -16,7 +16,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class CapitalCityReportsIntegrationTest {
+public class  CapitalCityReportsIntegrationTest {
 
     private static Connection connection;
     private static CapitalCityReports reports;

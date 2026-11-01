@@ -64,7 +64,6 @@ jobs:
             if docker compose exec -T db sh -c \
               'mysql -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" -e "USE world; SELECT COUNT(*) FROM city;"' \
               > /dev/null 2>&1; then
-
               echo "MySQL database is ready!"
               exit 0
             fi
@@ -91,11 +90,19 @@ jobs:
           mvn jacoco:report
           test -s target/site/jacoco/jacoco.xml
 
+      - name: Verify Coverage Report
+        run: |
+          echo "Checking JaCoCo XML file..."
+          ls -lh target/site/jacoco/
+          test -s target/site/jacoco/jacoco.xml
+          echo "JaCoCo XML exists and is not empty."
+
       - name: Upload Coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
           use_oidc: true
           files: ./target/site/jacoco/jacoco.xml
+          disable_search: true
           flags: integrationtests
           fail_ci_if_error: true
           verbose: true

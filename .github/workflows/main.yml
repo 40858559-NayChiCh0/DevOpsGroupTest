@@ -67,7 +67,7 @@ jobs:
           docker compose logs db
           exit 1
 
-      - name: Integration Tests
+      - name: Integration Tests and CodeCov
         env:
           DB_HOST: localhost
           DB_PORT: "33060"
@@ -75,6 +75,21 @@ jobs:
           DB_USER: devops
           DB_PASSWORD: devops
         run: mvn -Dtest=com.napier.MainIntegrationTest test
+
+      - name: Generate JaCoCo XML Coverage Report
+        run: |
+          mvn jacoco:report
+          test -s target/site/jacoco/jacoco.xml
+
+      - name: Upload Coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./target/site/jacoco/jacoco.xml
+          flags: integrationtests
+          fail_ci_if_error: true
+          verbose: true
+
 
       - name: Show MySQL Logs on Failure
         if: failure()

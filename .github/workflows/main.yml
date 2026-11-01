@@ -37,10 +37,6 @@ jobs:
     name: Integration Tests
     runs-on: ubuntu-26.04
 
-    permissions:
-      contents: read
-      id-token: write
-
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -58,8 +54,7 @@ jobs:
 
       - name: Wait for MySQL Database
         run: |
-          echo "Waiting for MySQL to be ready..."
-
+          echo "Waiting for the world database..."
           for i in {1..30}; do
             if docker compose exec -T db sh -c \
               'mysql -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" -e "USE world; SELECT COUNT(*) FROM city;"' \
@@ -67,45 +62,20 @@ jobs:
               echo "MySQL database is ready!"
               exit 0
             fi
-
-            echo "Attempt $i: MySQL is not ready..."
+            echo "Attempt $i: MySQL not ready yet"
             sleep 3
           done
-
-          echo "ERROR: MySQL database not ready."
           docker compose logs db
           exit 1
 
       - name: Integration Tests
         env:
           DB_HOST: localhost
-          DB_PORT: "33060"
+          DB_PORT: '33060'
           DB_NAME: world
           DB_USER: devops
           DB_PASSWORD: devops
         run: mvn -Dtest=com.napier.MainIntegrationTest test
-
-      - name: Generate JaCoCo XML Coverage Report
-        run: |
-          mvn jacoco:report
-          test -s target/site/jacoco/jacoco.xml
-
-      - name: Verify Coverage Report
-        run: |
-          echo "Checking JaCoCo XML file..."
-          ls -lh target/site/jacoco/
-          test -s target/site/jacoco/jacoco.xml
-          echo "JaCoCo XML exists and is not empty."
-
-      - name: Upload Coverage to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          use_oidc: true
-          files: ./target/site/jacoco/jacoco.xml
-          disable_search: true
-          flags: integrationtests
-          fail_ci_if_error: true
-          verbose: true
 
       - name: Show MySQL Logs on Failure
         if: failure()

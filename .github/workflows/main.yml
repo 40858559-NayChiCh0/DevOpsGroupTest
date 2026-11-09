@@ -25,11 +25,20 @@ jobs:
       - name: Package with Maven
         run: mvn clean package -DskipTests
 
-      - name: Generate JaCoCo Coverage Report
-        run: mvn jacoco:report
+      - name: Check for JaCoCo Coverage Report
+        id: coverage
+        run: |
+          if [ -f target/site/jacoco/jacoco.xml ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "JaCoCo coverage report found."
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "No JaCoCo coverage report found."
+            echo "Tests are required to generate coverage."
+          fi
 
-      - name: Upload Code Coverage to Codecov
-        if: ${{ hashFiles('target/site/jacoco/jacoco.xml') != '' }}
+      - name: Upload Coverage Reports to Codecov
+        if: steps.coverage.outputs.available == 'true'
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

@@ -25,6 +25,19 @@ jobs:
       - name: Package with Maven
         run: mvn clean package -DskipTests
 
+      - name: Generate JaCoCo Coverage Report
+        run: mvn jacoco:report
+
+      - name: Upload Code Coverage to Codecov
+        if: ${{ hashFiles('target/site/jacoco/jacoco.xml') != '' }}
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./target/site/jacoco/jacoco.xml
+          flags: population-report
+          fail_ci_if_error: false
+          verbose: true
+
       - name: Validate Docker Compose
         run: docker compose -f docker-compose.yml config --quiet
 

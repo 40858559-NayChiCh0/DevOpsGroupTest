@@ -14,10 +14,11 @@ public class Main {
                 System.out.println(
                         "Database connection succeeded.");
                 // Population Breakdown & Urbanization Reports
-                PopulationReport report = new PopulationReport(connection);
+//                PopulationReport report = new PopulationReport(connection);
 
                 // Generate all three reports
-                report.generateAllReports();
+//                report.generateAllReports();
+                CountryReports.printAllReports();
 
             } else {
                 System.out.println(

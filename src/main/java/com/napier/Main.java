@@ -1,11 +1,19 @@
 package com.napier;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.ArrayList;
 
 public class Main {
+    static void main(String[] args) {
 
-     static void main(String[] args) {
+        // Change these values to generate reports for other locations.
+        String continent = "Asia";
+        String region = "Eastern Asia";
+        String countryName = "Myanmar";
+        String district = "Sagaing";
+        int n = 10;
 
         try (Connection connection =
                      DBConnection.getConnection()) {
@@ -13,12 +21,66 @@ public class Main {
             if (connection.isValid(2)) {
                 System.out.println(
                         "Database connection succeeded.");
-                // Population Breakdown & Urbanization Reports
-                PopulationReport report = new PopulationReport(connection);
+                CityReport cityReport = new CityReport();
 
-                // Generate all three reports
-                report.generateAllReports();
 
+                // Issue 34: All cities in the world by population.
+                ArrayList<City> cities =
+                        cityReport.getAllCities(connection);
+
+                cityReport.printCityReport(
+                        cities,
+                        "ALL CITIES IN THE WORLD BY POPULATION");
+
+                // Issue 35: All cities in a continent(Asia) by population.
+                ArrayList<City> continentCities =
+                        cityReport.getCitiesByContinent(
+                                connection, continent);
+
+                cityReport.printCityReport(
+                        continentCities,
+                        "ALL CITIES IN " + continent.toUpperCase()
+                                + " BY POPULATION");
+
+                // Issue 36: All cities in a region by population.
+                ArrayList<City> regionCities =
+                        cityReport.getCitiesByRegion(
+                                connection, region);
+
+                cityReport.printCityReport(
+                        regionCities,
+                        "ALL CITIES IN " + region.toUpperCase()
+                                + " BY POPULATION");
+
+                // Issue 37: All cities in a country by population
+                ArrayList<City> countryCities =
+                        cityReport.getCitiesByCountry(
+                                connection, countryName);
+                cityReport.printCityReport(countryCities,
+                        "ALL CITIES IN " + countryName.toUpperCase()
+                                + "BY POPULATION");
+
+                // Issue 38: All cities in a district by population
+                ArrayList<City> districtCities = cityReport.getCitiesByDistrict(
+                        connection, district);
+                cityReport.printCityReport(districtCities,
+                        "ALL CITIES IN " + district.toUpperCase()
+                        +"BY POPULATION"
+                );
+
+                //Issue 39: Top N populated Cities in the World
+                ArrayList<City> topNCities = cityReport.getTopNCitiesInWorld(connection,n);
+                cityReport.printCityReport(
+                        topNCities,"TOP " + n + " POPULATED CITIES IN THE WOR"
+                );
+
+                // Issue 40: Top N populated Cities in a continent
+                ArrayList<City> topNCitiesByContinent = cityReport.getTopNCitiesByContinent(connection, continent, n);
+                cityReport.printCityReport(
+                        topNCitiesByContinent, "TOP " + n + " POPULATED CITIES IN " + continent.toUpperCase()
+                );
+
+                addCity("Test City", "MMR","Sagaing",50000);
             } else {
                 System.out.println(
                         "Database connection is invalid.");
@@ -32,7 +94,29 @@ public class Main {
 
             e.printStackTrace();
         }
+    }
 
-         System.out.print("Han Thar Soe San Feature -> Develop");
+    public static void addCity(String cityName, String countryCode,
+                        String district, int population){
+        String sql = """
+                INSERT INTO city (Name, CountryCode, District, Population)
+                            VALUES (?, ?, ?, ?)
+                """;
+        try(Connection connection = DBConnection.getConnection();
+            PreparedStatement statement = connection.prepareStatement(sql)){
+            statement.setString(1,cityName);
+            statement.setString(2,countryCode);
+            statement.setString(3,district);
+            statement.setInt(4,population);
+
+            int rowsAffected = statement.executeUpdate();
+            if(rowsAffected > 0){
+                System.out.println("City added successfully.");
+            }else{
+                System.out.println("Failed to insert city");
+            }
+        }catch (SQLException e){
+            System.out.println("Error adding city: "+e.getMessage());
+        }
     }
 }

@@ -4,6 +4,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
@@ -123,7 +125,33 @@ class MainIntegrationTest {
                         city.getDistrict());
             }
         }
+    }
 
+    @Test
+    void testAddCity() throws SQLException {
+        String cityName    = "New York";
+        String countryCode = "USA";
+        String district    = "New York";
+        int    population  = 100;
 
+        Main.addCity(cityName, countryCode, district, population);
+
+        String sql = "select count(*) from city " +
+                "where Name = ? and CountryCode = ? and District = ? and Population = ?";
+
+        try (Connection connection = DBConnection.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setString(1, cityName);
+            statement.setString(2, countryCode);
+            statement.setString(3, district);
+            statement.setInt(4, population);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                assertTrue(resultSet.next());
+                assertEquals(1, resultSet.getInt(1),
+                        "Expected exactly one matching city row, but addCity did not insert it correctly");
+            }
+        }
     }
 }

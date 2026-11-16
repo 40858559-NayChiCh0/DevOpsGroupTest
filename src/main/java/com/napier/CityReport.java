@@ -1,0 +1,547 @@
+package com.napier;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+
+public class CityReport {
+
+    /**
+     * Issue 34: All cities in the world
+     * Gets all cities in the world ordered by population.
+     *
+     * @param connection Database connection.
+     * @return List of cities.
+     */
+    public ArrayList<City> getAllCities(Connection connection) {
+
+        ArrayList<City> cities = new ArrayList<>();
+
+        String sql = """
+                SELECT city.ID,
+                       city.Name,
+                       city.CountryCode,
+                       country.Name AS CountryName,
+                       city.District,
+                       city.Population
+                FROM city
+                JOIN country
+                    ON city.CountryCode = country.Code
+                ORDER BY city.Population DESC, city.ID ASC
+                """;
+
+        try (PreparedStatement statement =
+                     connection.prepareStatement(sql);
+             ResultSet resultSet = statement.executeQuery()) {
+
+            while (resultSet.next()) {
+
+                City city = new City();
+
+                city.setId(resultSet.getInt("ID"));
+                city.setName(resultSet.getString("Name"));
+                city.setCountryCode(
+                        resultSet.getString("CountryCode"));
+                city.setDistrict(
+                        resultSet.getString("District"));
+                city.setPopulation(
+                        resultSet.getInt("Population"));
+
+                // Create a Country object
+                Country country = new Country();
+
+                country.setCode(
+                        resultSet.getString("CountryCode"));
+                country.setName(
+                        resultSet.getString("CountryName"));
+
+                // Associate the country with the city
+                city.setCountry(country);
+
+                cities.add(city);
+            }
+
+        } catch (SQLException e) {
+            throw new IllegalStateException(
+                    "Failed to retrieve city report.", e);
+        }
+
+        return cities;
+    }
+
+
+    /**
+     * Prints city reports with Name, Country,
+     * District and Population.
+     * Handles null lists and null City objects safely
+     *
+     * @param cities List of cities.
+     * @param title Report title.
+     */
+    public void printCityReport(
+            ArrayList<City> cities, String title) {
+
+        System.out.println(
+                "\n========== " + title + " ==========");
+
+        if (cities == null || cities.isEmpty()) {
+            System.out.println("No cities found.");
+            return;
+        }
+
+        // Country valid cities, excluding null objects
+        int validCityCount = 0;
+        for (City city : cities) {
+            if(city != null){
+                validCityCount++;
+            }
+        }
+
+        if (validCityCount == 0) {
+            System.out.println("No cities found.");
+            return;
+        }
+
+        System.out.printf(
+                "%-25s %-25s %-25s %15s%n",
+                "Name", "Country", "District", "Population");
+
+        System.out.println("-".repeat(95));
+
+        for (City city : cities) {
+
+            // Skip null City objects
+            if(city == null){
+                continue;
+            }
+            String countryName = "Unknown";
+
+            // Handle null country objects
+            if(city.getCountry() != null){
+                countryName = city.getCountry().getName();
+            }
+
+            System.out.printf(
+                    "%-25.25s %-25.25s %-25.25s %,15d%n",
+                    city.getName() == null ? "Unknown" : city.getName(),
+                    countryName == null ? "Unknown" : countryName,
+                    city.getDistrict() == null ? "Unknown" : city.getDistrict(),
+                    city.getPopulation());
+        }
+
+        System.out.println("-".repeat(95));
+        System.out.println("Total cities: " + cities.size());
+    }
+
+    /**
+     * Issue 35: All cities in a selected continent
+     * Retrieves all cities in a selected continent,
+     * ordered by population from largest to smallest.
+     *
+     * @param connection Active database connection.
+     * @param continent Name of the selected continent.
+     * @return List of cities in the selected continent.
+     */
+    public ArrayList<City> getCitiesByContinent(
+            Connection connection, String continent) {
+
+        ArrayList<City> cities = new ArrayList<>();
+
+        String sql = """
+            SELECT city.ID,
+                   city.Name,
+                   city.CountryCode,
+                   country.Name AS CountryName,
+                   city.District,
+                   city.Population
+            FROM city
+            JOIN country
+                ON city.CountryCode = country.Code
+            WHERE country.Continent = ?
+            ORDER BY city.Population DESC, city.ID ASC
+            """;
+
+        try (PreparedStatement statement =
+                     connection.prepareStatement(sql)) {
+
+            statement.setString(1, continent);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+
+                while (resultSet.next()) {
+
+                    City city = new City();
+
+                    city.setId(resultSet.getInt("ID"));
+                    city.setName(resultSet.getString("Name"));
+                    city.setCountryCode(
+                            resultSet.getString("CountryCode"));
+                    city.setDistrict(
+                            resultSet.getString("District"));
+                    city.setPopulation(
+                            resultSet.getInt("Population"));
+
+                    Country country = new Country();
+
+                    country.setCode(
+                            resultSet.getString("CountryCode"));
+                    country.setName(
+                            resultSet.getString("CountryName"));
+
+                    city.setCountry(country);
+
+                    cities.add(city);
+                }
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException(
+                    "Failed to retrieve cities for continent: "
+                            + continent, e);
+        }
+        return cities;
+    }
+
+
+    /**
+     * Issue 36: Gets all cities in a selected region,
+     * ordered by population from largest to smallest.
+     *
+     * @param connection Database connection.
+     * @param region Selected region.
+     * @return List of cities in the selected region.
+     */
+    public ArrayList<City> getCitiesByRegion(
+            Connection connection, String region) {
+
+        ArrayList<City> cities = new ArrayList<>();
+
+        String sql = """
+            SELECT city.ID,
+                   city.Name,
+                   city.CountryCode,
+                   country.Name AS CountryName,
+                   city.District,
+                   city.Population
+            FROM city
+            JOIN country
+                ON city.CountryCode = country.Code
+            WHERE country.Region = ?
+            ORDER BY city.Population DESC, city.ID ASC
+            """;
+
+        try (PreparedStatement statement =
+                     connection.prepareStatement(sql)) {
+
+            statement.setString(1, region);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+
+                while (resultSet.next()) {
+
+                    City city = new City();
+
+                    city.setId(resultSet.getInt("ID"));
+                    city.setName(resultSet.getString("Name"));
+                    city.setCountryCode(
+                            resultSet.getString("CountryCode"));
+                    city.setDistrict(
+                            resultSet.getString("District"));
+                    city.setPopulation(
+                            resultSet.getInt("Population"));
+
+                    Country country = new Country();
+
+                    country.setCode(
+                            resultSet.getString("CountryCode"));
+                    country.setName(
+                            resultSet.getString("CountryName"));
+
+                    city.setCountry(country);
+                    cities.add(city);
+                }
+            }
+
+        } catch (SQLException e) {
+            throw new IllegalStateException(
+                    "Failed to retrieve cities for region: "
+                            + region, e);
+        }
+
+        return cities;
+    }
+
+
+    /**
+     * Issue 37: All cities in a selected country
+     * ordered by population from largest to smallest
+     *
+     * @param connection Database connection
+     * @param countryName selected country
+     * @return List of cities
+     */
+    public ArrayList<City> getCitiesByCountry(Connection connection, String countryName) {
+        ArrayList<City> cities = new ArrayList<>();
+        String sql = """
+                SELECT city.ID,
+                city.Name,
+                city.CountryCode,
+                country.Name AS CountryName,
+                city.District,
+                city.Population
+                FROM city
+                JOIN country
+                ON city.CountryCode = country.Code
+                WHERE country.Name = ?
+                ORDER BY city.Population DESC, city.ID ASC
+                """;
+        try(PreparedStatement statement = connection.prepareStatement(sql)){
+            statement.setString(1,countryName);
+            try(ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()){
+                    City city = new City();
+                    city.setId(resultSet.getInt("ID"));
+                    city.setName(resultSet.getString("Name"));
+                    city.setCountryCode(resultSet.getString("CountryCode"));
+                    city.setDistrict(resultSet.getString("District"));
+                    city.setPopulation(resultSet.getInt("Population"));
+
+                    Country country = new Country();
+                    country.setCode(resultSet.getString("CountryCode"));
+                    country.setName(resultSet.getString("CountryName"));
+                    city.setCountry(country);
+                    cities.add(city);
+                }
+            }
+        }catch (SQLException e) {
+            throw new IllegalStateException("Failed to retrieve cities for country: "
+            + countryName, e);
+        }
+        return cities;
+    }
+
+
+    /**
+     * Issue 38: All cities in a selected district
+     * ordered by population from largest to smallest.
+     *
+     * @param connection Database connection.
+     * @param district Selected district.
+     * @return List of cities.
+     */
+    public ArrayList<City> getCitiesByDistrict(
+            Connection connection, String district) {
+
+        ArrayList<City> cities = new ArrayList<>();
+
+        String sql = """
+            SELECT city.ID,
+                   city.Name,
+                   city.CountryCode,
+                   country.Name AS CountryName,
+                   city.District,
+                   city.Population
+            FROM city
+            JOIN country
+                ON city.CountryCode = country.Code
+            WHERE city.District = ?
+            ORDER BY city.Population DESC, city.ID ASC
+            """;
+
+        try (PreparedStatement statement =
+                     connection.prepareStatement(sql)) {
+
+            statement.setString(1, district);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+
+                while (resultSet.next()) {
+
+                    City city = new City();
+
+                    city.setId(resultSet.getInt("ID"));
+                    city.setName(resultSet.getString("Name"));
+                    city.setCountryCode(
+                            resultSet.getString("CountryCode"));
+                    city.setDistrict(
+                            resultSet.getString("District"));
+                    city.setPopulation(
+                            resultSet.getInt("Population"));
+
+                    Country country = new Country();
+
+                    country.setCode(
+                            resultSet.getString("CountryCode"));
+                    country.setName(
+                            resultSet.getString("CountryName"));
+
+                    city.setCountry(country);
+                    cities.add(city);
+                }
+            }
+
+        } catch (SQLException e) {
+            throw new IllegalStateException(
+                    "Failed to retrieve cities for district: "
+                            + district, e);
+        }
+
+        return cities;
+    }
+
+    /**
+     * Issue 39: Top N populated cities in the world.
+     * Retrieves the top N cities ordered by population
+     * from largest to smallest.
+     *
+     * @param connection Database connection.
+     * @param n Number of cities to retrieve.
+     * @return List of top N populated cities.
+     */
+    public ArrayList<City> getTopNCitiesInWorld(
+            Connection connection, int n) {
+
+        ArrayList<City> cities = new ArrayList<>();
+
+        if (n <= 0) {
+            throw new IllegalArgumentException(
+                    "N must be greater than zero.");
+        }
+
+        String sql = """
+        SELECT city.ID,
+               city.Name,
+               city.CountryCode,
+               country.Name AS CountryName,
+               city.District,
+               city.Population
+        FROM city
+        JOIN country
+            ON city.CountryCode = country.Code
+        ORDER BY city.Population DESC, city.ID ASC
+        LIMIT ?
+        """;
+
+        try (PreparedStatement statement =
+                     connection.prepareStatement(sql)) {
+
+            statement.setInt(1, n);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+
+                while (resultSet.next()) {
+
+                    City city = new City();
+
+                    city.setId(resultSet.getInt("ID"));
+                    city.setName(resultSet.getString("Name"));
+                    city.setCountryCode(
+                            resultSet.getString("CountryCode"));
+                    city.setDistrict(
+                            resultSet.getString("District"));
+                    city.setPopulation(
+                            resultSet.getInt("Population"));
+
+                    Country country = new Country();
+
+                    country.setCode(
+                            resultSet.getString("CountryCode"));
+                    country.setName(
+                            resultSet.getString("CountryName"));
+
+                    city.setCountry(country);
+                    cities.add(city);
+                }
+            }
+
+        } catch (SQLException e) {
+            throw new IllegalStateException(
+                    "Failed to retrieve top " + n
+                            + " populated cities in the world.", e);
+        }
+
+        return cities;
+    }
+
+
+    /**
+     * Issue 40: Top N populated cities in a continent.
+     * Retrieves the top N cities in a selected continent,
+     * ordered by population from largest to smallest.
+     *
+     * @param connection Database connection.
+     * @param continent Selected continent.
+     * @param n Number of cities to retrieve.
+     * @return List of top N populated cities in the continent.
+     */
+    public ArrayList<City> getTopNCitiesByContinent(
+            Connection connection, String continent, int n) {
+
+        ArrayList<City> cities = new ArrayList<>();
+
+        if (n <= 0) {
+            throw new IllegalArgumentException(
+                    "N must be greater than zero.");
+        }
+
+        String sql = """
+            SELECT city.ID,
+                   city.Name,
+                   city.CountryCode,
+                   country.Name AS CountryName,
+                   city.District,
+                   city.Population
+            FROM city
+            JOIN country
+                ON city.CountryCode = country.Code
+            WHERE country.Continent = ?
+            ORDER BY city.Population DESC, city.ID ASC
+            LIMIT ?
+            """;
+
+        try (PreparedStatement statement =
+                     connection.prepareStatement(sql)) {
+
+            statement.setString(1, continent);
+            statement.setInt(2, n);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+
+                while (resultSet.next()) {
+
+                    City city = new City();
+
+                    city.setId(resultSet.getInt("ID"));
+                    city.setName(resultSet.getString("Name"));
+                    city.setCountryCode(
+                            resultSet.getString("CountryCode"));
+                    city.setDistrict(
+                            resultSet.getString("District"));
+                    city.setPopulation(
+                            resultSet.getInt("Population"));
+
+                    Country country = new Country();
+
+                    country.setCode(
+                            resultSet.getString("CountryCode"));
+                    country.setName(
+                            resultSet.getString("CountryName"));
+
+                    city.setCountry(country);
+                    cities.add(city);
+                }
+            }
+
+        } catch (SQLException e) {
+            throw new IllegalStateException(
+                    "Failed to retrieve top " + n
+                            + " populated cities in " + continent, e);
+        }
+
+        return cities;
+    }
+
+}
+
+

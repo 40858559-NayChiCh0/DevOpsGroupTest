@@ -1,4 +1,3 @@
-
 name: A workflow for Population Report System
 
 on:
@@ -7,16 +6,18 @@ on:
       - master
       - develop
       - 'feature/**'
-
   pull_request:
     branches:
       - develop
       - master
 
+permissions:
+  contents: read
+
 jobs:
   UnitTests:
     name: Unit Tests
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout
@@ -28,14 +29,20 @@ jobs:
         uses: actions/setup-java@v5
         with:
           java-version: '25'
-          distribution: 'temurin'
+          distribution: temurin
 
-      - name: Unit Tests
-        run: mvn -Dtest=com.napier.MainTest test
+      - name: Run unit tests
+        run: mvn -B '-Dsurefire.excludes=**/*IntegrationTest.java,**/*$*' -DfailIfNoTests=true test
 
   IntegrationTests:
     name: Integration Tests
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-24.04
+    env:
+      DB_HOST: localhost
+      DB_PORT: '33060'
+      DB_NAME: world
+      DB_USER: devops
+      DB_PASSWORD: devops
 
     steps:
       - name: Checkout
@@ -47,47 +54,44 @@ jobs:
         uses: actions/setup-java@v5
         with:
           java-version: '25'
-          distribution: 'temurin'
+          distribution: temurin
 
-      - name: Start MySQL Database
-        run: docker compose up -d db
+      - name: Start MySQL
+        run: docker compose up -d --build db
 
-      - name: Wait for MySQL Database
+      - name: Wait for MySQL on the published port
         run: |
-          echo "Waiting for the world database..."
-          for i in {1..30}; do
-            if docker compose exec -T db sh -c \
-              'mysql -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" -e "USE world; SELECT COUNT(*) FROM city;"' \
-              > /dev/null 2>&1; then
-              echo "MySQL database is ready!"
+          for attempt in {1..60}; do
+            if row=$(MYSQL_PWD="$DB_PASSWORD" mysql --protocol=TCP --connect-timeout=3 \
+              --host="$DB_HOST" --port="$DB_PORT" --user="$DB_USER" \
+              --database="$DB_NAME" --batch --skip-column-names \
+              --execute='SELECT 1 FROM city LIMIT 1' 2>/dev/null) && [[ "$row" == 1 ]]; then
+              echo "The world database is ready."
               exit 0
             fi
-            echo "Attempt $i: MySQL not ready yet"
-            sleep 3
+
+            echo "Waiting for the world database (attempt $attempt of 60)."
+            sleep 2
           done
-          docker compose logs db
+          echo "::error::Could not query world.city via $DB_HOST:$DB_PORT as $DB_USER."
           exit 1
 
-      - name: Integration Tests
-        env:
-          DB_HOST: localhost
-          DB_PORT: '33060'
-          DB_NAME: world
-          DB_USER: devops
-          DB_PASSWORD: devops
-        run: mvn -Dtest=com.napier.MainIntegrationTest test
+      - name: Run integration tests
+        run: mvn -B '-Dtest=*IntegrationTest' -DfailIfNoTests=true test
 
-      - name: Show MySQL Logs on Failure
+      - name: Show MySQL logs on failure
         if: failure()
-        run: docker compose logs db
+        run: docker compose logs --no-color db
 
-      - name: Stop MySQL Database
+      - name: Stop MySQL
         if: always()
         run: docker compose down
 
   build:
-    name: Build and Start Using docker-compose
-    runs-on: ubuntu-26.04
+    name: Build and Run Docker Compose
+    needs: [UnitTests, IntegrationTests]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -99,37 +103,60 @@ jobs:
         uses: actions/setup-java@v5
         with:
           java-version: '25'
-          distribution: 'temurin'
+          distribution: temurin
 
-      - name: Package Application
-        run: mvn package -DskipTests
+      - name: Package the application
+        run: mvn -B package -DskipTests
 
-      - name: Build and Run Docker Compose
-        run: docker compose up --build --abort-on-container-exit
+      - name: Build and run Docker Compose
+        run: docker compose up --build --exit-code-from app app
 
-      - name: Cleanup Docker Compose
+      - name: Verify the application wrote to MySQL
+        run: |
+          app_logs=$(docker compose logs --no-color --no-log-prefix app)
+          if ! grep -Fxq 'City added successfully.' <<< "$app_logs"; then
+            echo "::error::The app container did not report a successful database write."
+            exit 1
+          fi
+
+      - name: Show container logs on failure
+        if: failure()
+        run: docker compose logs --no-color app db
+
+      - name: Stop Docker Compose
         if: always()
         run: docker compose down
-  name: Build Run in Docker and Deploy Release
-  runs-on: ubuntu-22.04
-  steps:
-    - name: Checkout
-      uses: actions/checkout@v5
-      with:
-        submodules: recursive
-    - name: Set up JDK 17
-      uses: actions/setup-java@v5
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-    - name: Package and Run docker compose
-      run: |
-        mvn package -DskipTests
-        docker compose up --abort-on-container-exit
-    - uses: "marvinpinto/action-automatic-releases@latest"
-      with:
-        repo_token: "${{ secrets.GITHUB_TOKEN }}"
-        prerelease: false
-        automatic_release_tag: "latest"
-        files: |
-          ./target/*.jar
+
+      - name: Upload the tested JAR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: actions/upload-artifact@v7
+        with:
+          name: population-report-jar
+          path: target/devops.jar
+          if-no-files-found: error
+
+  Release:
+    name: GitHub Release
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download the tested JAR
+        uses: actions/download-artifact@v8
+        with:
+          name: population-report-jar
+          path: target
+
+      - name: Publish the JAR to GitHub Releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="build-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          gh release create "$tag" target/devops.jar \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Population Report System $tag" \
+            --generate-notes

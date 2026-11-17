@@ -90,7 +90,133 @@ jobs:
   build:
     name: Build and Run Docker Compose
     needs: [UnitTests, IntegrationTests]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: temurin
+
+      - name: Package the application
+        run: mvn -B package -DskipTests
+
+      - name: Build and run Docker Compose
+        run: docker compose up --build --exit-code-from app app
+
+      - name: Verify the application wrote to MySQL
+        run: |
+          app_logs=$(docker compose logs --no-color --no-log-prefix app)
+          if ! grep -Fxq 'City added successfully.' <<< "$app_logs"; then
+            echo "::error::The app container did not report a successful database write."
+            exit 1
+          fi
+
+      - name: Copy the Markdown report from the app container
+        run: |
+          mkdir -p reports
+          docker compose cp app:/tmp/reports/README.md reports/README.md
+          test -s reports/README.md
+
+      - name: Show the table in the Actions summary
+        run: cat reports/README.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the Markdown report
+        uses: actions/upload-artifact@v7
+        with:
+          name: population-report-markdown
+          path: reports/README.md
+          if-no-files-found: error
+          overwrite: true
+
+      - name: Show container logs on failure
+        if: failure()
+        run: docker compose logs --no-color app db
+
+      - name: Stop Docker Compose
+        if: always()
+        run: docker compose down
+
+      - name: Upload the tested JAR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: actions/upload-artifact@v7
+        with:
+          name: population-report-jar
+          path: target/devops.jar
+          if-no-files-found: error
+
+  Release:
+    name: GitHub Release
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download the tested JAR
+        uses: actions/download-artifact@v8
+        with:
+          name: population-report-jar
+          path: target
+
+      - name: Publish the JAR to GitHub Releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="build-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          gh release create "$tag" target/devops.jar \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Population Report System $tag" \
+            --generate-notes
+
+  PublishReports:
+    name: Publish Markdown report
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: write
+    concurrency:
+      group: reports-branch
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download the Markdown report
+        uses: actions/download-artifact@v8
+        with:
+          name: population-report-markdown
+          path: ${{ runner.temp }}/population-report
+
+      - name: Publish the report to the reports branch
+        run: |
+          reports_ref=$(git ls-remote --heads origin refs/heads/reports)
+          if [[ -n "$reports_ref" ]]; then
+            git fetch --no-tags --depth=1 origin refs/heads/reports
+            git switch --detach FETCH_HEAD
+          else
+            git switch --orphan reports
+          fi
+
+          cp "$RUNNER_TEMP/population-report/README.md" README.md
+          git add -- README.md
+          if git diff --cached --quiet; then
+            echo "The published report is already up to date."
+            exit 0
+          fi
+
+          git -c user.name='github-actions[bot]' \
+            -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -m "Update population report"
+          git push origin HEAD:refs/heads/reports

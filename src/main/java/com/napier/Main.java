@@ -1,9 +1,15 @@
 package com.napier;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 
 public class Main {
     static void main(String[] args) {
@@ -65,14 +71,15 @@ public class Main {
                         connection, district);
                 cityReport.printCityReport(districtCities,
                         "ALL CITIES IN " + district.toUpperCase()
-                        +"BY POPULATION"
+                                +"BY POPULATION"
                 );
 
                 //Issue 39: Top N populated Cities in the World
                 ArrayList<City> topNCities = cityReport.getTopNCitiesInWorld(connection,n);
                 cityReport.printCityReport(
-                        topNCities,"TOP " + n + " POPULATED CITIES IN THE WOR"
+                        topNCities, "TOP " + n + " POPULATED CITIES IN THE WORLD"
                 );
+                writeTopCitiesReport(topNCities, n);
 
                 // Issue 40: Top N populated Cities in a continent
                 ArrayList<City> topNCitiesByContinent = cityReport.getTopNCitiesByContinent(connection, continent, n);
@@ -93,11 +100,58 @@ public class Main {
                             + e.getMessage());
 
             e.printStackTrace();
+        } catch (IOException e) {
+            throw new UncheckedIOException("Could not write the Markdown city report", e);
         }
     }
 
+    private static void writeTopCitiesReport(List<City> cities, int limit) throws IOException {
+        Path reportDirectory = Path.of("reports");
+        Files.createDirectories(reportDirectory);
+
+        StringBuilder markdown = new StringBuilder();
+        markdown.append("# Top ").append(limit).append(" populated cities in the world\n\n");
+
+        if (cities.isEmpty()) {
+            markdown.append("No cities found.\n");
+        } else {
+            markdown.append("| Rank | City | Country | District | Population |\n")
+                    .append("| ---: | --- | --- | --- | ---: |\n");
+
+            int rank = 1;
+            for (City city : cities) {
+                Country country = city.getCountry();
+                markdown.append("| ").append(rank++)
+                        .append(" | ").append(markdownCell(city.getName()))
+                        .append(" | ").append(markdownCell(country == null ? null : country.getName()))
+                        .append(" | ").append(markdownCell(city.getDistrict()))
+                        .append(" | ").append(String.format(Locale.ROOT, "%,d", city.getPopulation()))
+                        .append(" |\n");
+            }
+        }
+
+        Path report = reportDirectory.resolve("README.md");
+        Files.writeString(report, markdown);
+        System.out.println("Markdown report written to " + report.toAbsolutePath());
+    }
+
+    private static String markdownCell(String value) {
+        if (value == null || value.isBlank()) {
+            return "Unknown";
+        }
+
+        return value.replace("&", "&amp;")
+                .replace("\\", "&#92;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("|", "&#124;")
+                .replace("\r", " ")
+                .replace("\n", " ")
+                .strip();
+    }
+
     public static void addCity(String cityName, String countryCode,
-                        String district, int population){
+                               String district, int population){
         String sql = """
                 INSERT INTO city (Name, CountryCode, District, Population)
                             VALUES (?, ?, ?, ?)
